@@ -152,3 +152,15 @@ Choose any license that fits your project, such as MIT, BSD-3-Clause, or GPL, de
 Acknowledgments
 
 Thanks to the ESP32 Arduino project and the HIJEL HID BLE Mouse library developers for providing the foundation that made this project possible.
+
+
+Tested setup:
+
+ESP32-S3 DevKitC-1 N8R8
+HIJEL HID BLE Mouse 0.1.0
+Joystick X: GPIO 4
+Joystick Y: GPIO 5
+Left click: GPIO 6
+Right click: GPIO 7
+Scroll up: GPIO 15
+Scroll down: GPIO 16
