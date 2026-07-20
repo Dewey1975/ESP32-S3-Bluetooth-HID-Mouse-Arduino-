@@ -1,0 +1,171 @@
+#include <HijelHID_BLEMouse.h>
+
+// Bluetooth device name, manufacturer name, battery level,
+// connection interval, and bonding setting.
+HijelBLEMouse mouse("My ESP32 Mouse", "Bob", 100, 5, false);
+
+
+// -------------------------
+// GPIO pin assignments
+// -------------------------
+
+const int joystick_x_pin = 4;
+const int joystick_y_pin = 5;
+
+const int left_click_pin = 6;
+const int right_click_pin = 7;
+
+const int scroll_up_pin = 15;
+const int scroll_down_pin = 16;
+
+
+// -------------------------
+// Joystick settings
+// -------------------------
+
+int joystick_x_center = 2048;
+int joystick_y_center = 2048;
+
+// Ignore small joystick movements around the center.
+const int dead_zone = 250;
+
+// Lower number = faster cursor.
+// Higher number = slower cursor.
+const int movement_divider = 180;
+
+
+// -------------------------
+// Previous button states
+// -------------------------
+
+bool last_left_click_state = HIGH;
+bool last_right_click_state = HIGH;
+
+bool last_scroll_up_state = HIGH;
+bool last_scroll_down_state = HIGH;
+
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(joystick_x_pin, INPUT);
+  pinMode(joystick_y_pin, INPUT);
+
+  pinMode(left_click_pin, INPUT_PULLUP);
+  pinMode(right_click_pin, INPUT_PULLUP);
+
+  pinMode(scroll_up_pin, INPUT_PULLUP);
+  pinMode(scroll_down_pin, INPUT_PULLUP);
+
+  // Allow the board and joystick voltage to settle.
+  delay(1000);
+
+  // Read the joystick resting position at startup.
+  // Leave the joystick centered while the board powers on.
+  joystick_x_center = analogRead(joystick_x_pin);
+  joystick_y_center = analogRead(joystick_y_pin);
+
+  // Start the Bluetooth mouse.
+  mouse.begin();
+}
+
+
+void loop() {
+  if (mouse.isPaired()) {
+
+    // -------------------------
+    // Read joystick
+    // -------------------------
+
+    int joystick_x_value = analogRead(joystick_x_pin);
+    int joystick_y_value = analogRead(joystick_y_pin);
+
+    int x_difference = joystick_x_value - joystick_x_center;
+    int y_difference = joystick_y_value - joystick_y_center;
+
+    int mouse_x_movement = 0;
+    int mouse_y_movement = 0;
+
+
+    // -------------------------
+    // Convert joystick movement
+    // into mouse movement
+    // -------------------------
+
+    if (x_difference > dead_zone || x_difference < -dead_zone) {
+      mouse_x_movement = x_difference / movement_divider;
+    }
+
+    if (y_difference > dead_zone || y_difference < -dead_zone) {
+      mouse_y_movement = y_difference / movement_divider;
+    }
+
+    mouse.move(mouse_x_movement, mouse_y_movement);
+
+
+    // -------------------------
+    // Read buttons
+    // -------------------------
+
+    bool left_click_state = digitalRead(left_click_pin);
+    bool right_click_state = digitalRead(right_click_pin);
+
+    bool scroll_up_state = digitalRead(scroll_up_pin);
+    bool scroll_down_state = digitalRead(scroll_down_pin);
+
+
+    // -------------------------
+    // Left mouse button
+    // -------------------------
+
+    if (left_click_state != last_left_click_state) {
+      if (left_click_state == LOW) {
+        mouse.setButton(MouseButton::Left, true);
+      } else {
+        mouse.setButton(MouseButton::Left, false);
+      }
+
+      last_left_click_state = left_click_state;
+    }
+
+
+    // -------------------------
+    // Right mouse button
+    // -------------------------
+
+    if (right_click_state != last_right_click_state) {
+      if (right_click_state == LOW) {
+        mouse.setButton(MouseButton::Right, true);
+      } else {
+        mouse.setButton(MouseButton::Right, false);
+      }
+
+      last_right_click_state = right_click_state;
+    }
+
+
+    // -------------------------
+    // Scroll up
+    // -------------------------
+
+    if (scroll_up_state == LOW && last_scroll_up_state == HIGH) {
+      mouse.addScroll(1);
+    }
+
+
+    // -------------------------
+    // Scroll down
+    // -------------------------
+
+    if (scroll_down_state == LOW && last_scroll_down_state == HIGH) {
+      mouse.addScroll(-1);
+    }
+
+
+    // Save scroll button states for the next loop.
+    last_scroll_up_state = scroll_up_state;
+    last_scroll_down_state = scroll_down_state;
+  }
+
+  delay(10);
+}
